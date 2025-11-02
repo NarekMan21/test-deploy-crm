@@ -23,6 +23,7 @@ services:
       name: backend-disk
       mountPath: /app/data
       sizeGB: 1
+      plan: starter
 
   # Frontend Service
   - type: web
@@ -49,10 +50,3 @@ services:
       - key: NEXT_TELEMETRY_DISABLED
         value: 1
     staticPublishPath: .next
-
-# Persistent Disk для хранения базы данных
-disks:
-  - name: backend-disk
-    mountPath: /app/data
-    sizeGB: 1
-    plan: starter
