@@ -43,7 +43,12 @@ app.add_middleware(
 )
 
 # Serve uploaded files with custom handler for URL decoding
-app.mount("/uploads", CustomStaticFiles(directory="uploads"), name="uploads")
+# Используем persistent disk для uploads, если он доступен
+upload_dir = os.getenv("UPLOAD_DIR", "uploads")
+if os.path.exists("/app/data"):
+    upload_dir = "/app/data/uploads"
+    os.makedirs(upload_dir, exist_ok=True)
+app.mount("/uploads", CustomStaticFiles(directory=upload_dir), name="uploads")
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])

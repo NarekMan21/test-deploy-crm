@@ -18,11 +18,13 @@ services:
         sync: false  # Нужно будет настроить после деплоя frontend
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: UPLOAD_DIR
+        value: /app/data/uploads
     healthCheckPath: /health
     disk:
       name: backend-disk
       mountPath: /app/data
-      sizeGB: 1
+      sizeGB: 2  # Увеличено для базы данных и uploads
 
   # Frontend Service
   - type: web

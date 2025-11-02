@@ -15,7 +15,11 @@ from routers.auth import get_current_admin_user, get_current_logist_user, get_cu
 
 router = APIRouter()
 
-UPLOAD_DIR = "uploads"
+# Используем persistent disk для uploads, если он доступен
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads")
+# Если есть путь к диску, используем его, иначе локальный путь
+if os.path.exists("/app/data"):
+    UPLOAD_DIR = "/app/data/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Helper functions
