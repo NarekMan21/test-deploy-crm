@@ -1,0 +1,58 @@
+services:
+  # Backend API Service
+  - type: web
+    name: crmpy-backend
+    runtime: python
+    plan: starter  # Можно изменить на standard, pro
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python init_db.py
+    startCommand: python main.py
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:///./data/furniture_crm.db
+      - key: SECRET_KEY
+        generateValue: true  # Render автоматически сгенерирует ключ
+      - key: PORT
+        value: 8000
+      - key: CORS_ORIGINS
+        sync: false  # Нужно будет настроить после деплоя frontend
+      - key: PYTHON_VERSION
+        value: 3.11
+    healthCheckPath: /health
+    disk:
+      name: backend-disk
+      mountPath: /app/data
+      sizeGB: 1
+
+  # Frontend Service
+  - type: web
+    name: crmpy-frontend
+    runtime: node
+    plan: starter  # Можно изменить на standard, pro
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: crmpy-backend
+          property: host
+          suffix: /api
+      - key: NEXT_PUBLIC_API_SERVER_URL
+        fromService:
+          type: web
+          name: crmpy-backend
+          property: host
+      - key: NEXT_TELEMETRY_DISABLED
+        value: 1
+    staticPublishPath: .next
+
+# Persistent Disk для хранения базы данных
+disks:
+  - name: backend-disk
+    mountPath: /app/data
+    sizeGB: 1
+    plan: starter

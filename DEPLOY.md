@@ -185,6 +185,83 @@ sudo certbot --nginx -d yourdomain.com -d api.yourdomain.com
 
 ## Деплой в облако
 
+### Render
+
+Render - отличная платформа для деплоя с бесплатным тарифом. Проект готов к деплою на Render.
+
+#### Быстрый деплой на Render
+
+1. **Создайте аккаунт на [Render](https://render.com/)**
+
+2. **Подключите GitHub репозиторий:**
+   - В Dashboard нажмите "New +" → "Blueprint"
+   - Выберите ваш репозиторий
+   - Render автоматически обнаружит `render.yaml` и настроит сервисы
+
+3. **Или создайте сервисы вручную:**
+
+   **Backend:**
+   - New + → Web Service
+   - Подключите репозиторий
+   - Настройки:
+     - Name: `crmpy-backend`
+     - Runtime: `Python 3`
+     - Build Command: `pip install -r backend/requirements.txt && python backend/init_db.py`
+     - Start Command: `cd backend && python main.py`
+     - Environment Variables:
+       - `DATABASE_URL`: `sqlite+aiosqlite:///./data/furniture_crm.db`
+       - `SECRET_KEY`: (сгенерируйте через Generate или создайте сами)
+       - `PORT`: `8000`
+       - `CORS_ORIGINS`: (заполните после получения URL frontend)
+       - `PYTHON_VERSION`: `3.11`
+     - Health Check Path: `/health`
+     - Добавьте Disk:
+       - Name: `backend-disk`
+       - Mount Path: `/app/data`
+       - Size: 1GB
+
+   **Frontend:**
+   - New + → Web Service
+   - Подключите тот же репозиторий
+   - Настройки:
+     - Name: `crmpy-frontend`
+     - Runtime: `Node`
+     - Root Directory: `frontend`
+     - Build Command: `npm install && npm run build`
+     - Start Command: `npm start`
+     - Environment Variables:
+       - `NEXT_PUBLIC_API_URL`: `https://your-backend-url.onrender.com/api`
+       - `NEXT_PUBLIC_API_SERVER_URL`: `https://your-backend-url.onrender.com`
+       - `NODE_ENV`: `production`
+       - `NEXT_TELEMETRY_DISABLED`: `1`
+
+4. **Обновите CORS в Backend:**
+   После получения URL frontend, добавьте его в `CORS_ORIGINS`:
+   ```
+   CORS_ORIGINS=https://your-frontend-url.onrender.com,https://your-backend-url.onrender.com
+   ```
+
+5. **Дождитесь завершения деплоя** (обычно 5-10 минут)
+
+#### Использование render.yaml (Blueprint)
+
+1. В Render Dashboard: New + → Blueprint
+2. Подключите репозиторий
+3. Выберите `render.yaml` из корня проекта
+4. Render автоматически создаст оба сервиса
+
+**Важно:** После деплоя обновите `CORS_ORIGINS` в настройках backend сервиса, добавив URL frontend.
+
+#### Преимущества Render:
+- ✅ Бесплатный тариф для тестирования
+- ✅ Автоматический HTTPS
+- ✅ Автоматические деплои из Git
+- ✅ Persistent Disks для данных
+- ✅ Health checks
+- ✅ Простая настройка окружения
+
+Подробнее: [Render Documentation](https://render.com/docs)
+
 ### Yandex Cloud / Kubernetes
 
 Проект включает файлы для деплоя в Kubernetes:
@@ -200,7 +277,6 @@ sudo certbot --nginx -d yourdomain.com -d api.yourdomain.com
 - **DigitalOcean App Platform**
 - **Heroku** (с минимальными изменениями)
 - **Railway**
-- **Render**
 - **Fly.io**
 
 ## Мониторинг и логи
