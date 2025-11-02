@@ -23,7 +23,6 @@ services:
       name: backend-disk
       mountPath: /app/data
       sizeGB: 1
-      plan: starter
 
   # Frontend Service
   - type: web
