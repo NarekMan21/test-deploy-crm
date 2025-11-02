@@ -48,4 +48,3 @@ services:
           property: host
       - key: NEXT_TELEMETRY_DISABLED
         value: 1
-    staticPublishPath: .next
