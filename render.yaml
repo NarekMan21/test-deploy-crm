@@ -17,7 +17,7 @@ services:
       - key: CORS_ORIGINS
         sync: false  # Нужно будет настроить после деплоя frontend
       - key: PYTHON_VERSION
-        value: 3.11
+        value: 3.11.0
     healthCheckPath: /health
     disk:
       name: backend-disk
