@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # Бэкенд сервис (FastAPI)
+  backend:
+    image: crmpy1-backend:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - SECRET_KEY=your-super-secret-key-change-this-in-production
+      - DATABASE_URL=sqlite:///./furniture_crm.db
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/furniture_crm.db:/app/furniture_crm.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Фронтенд сервис (Next.js)
+  frontend:
+    image: crmpy1-frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

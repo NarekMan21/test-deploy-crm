@@ -1,0 +1,18 @@
+Файлы для загрузки на VM Cloud.ru (176.108.253.113):
+
+1. crm-backend.tar (149MB) - Docker образ бэкенда
+2. crm-frontend.tar (64MB) - Docker образ фронтенда
+3. docker-compose-vm.yml - конфигурация Docker Compose
+4. deploy-vm.sh - скрипт автоматического развертывания
+
+Все файлы находятся в корневой директории проекта CRMpy.
+
+Альтернативный способ: создайте файлы вручную на VM.
+
+Для создания образов локально:
+1. docker save crmpy1-backend:latest -o crm-backend.tar
+2. docker save crmpy1-frontend:latest -o crm-frontend.tar
+
+Или скачайте готовые образы из Docker Hub (если будут опубликованы).
+
+Используйте веб-консоль Cloud.ru для загрузки файлов или настройте SCP доступ.
