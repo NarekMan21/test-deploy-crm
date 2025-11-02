@@ -5,11 +5,11 @@ services:
     runtime: python
     plan: starter  # Можно изменить на standard, pro
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && mkdir -p data && python init_db.py
+    buildCommand: pip install -r requirements.txt && mkdir -p /app/data && python init_db.py
     startCommand: python main.py
     envVars:
       - key: DATABASE_URL
-        value: sqlite+aiosqlite:///./data/furniture_crm.db
+        value: sqlite+aiosqlite:////app/data/furniture_crm.db
       - key: SECRET_KEY
         generateValue: true  # Render автоматически сгенерирует ключ
       - key: PORT
