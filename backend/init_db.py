@@ -11,13 +11,18 @@ async def init_users():
     import os
     from database import settings
     
-    # Создаем директорию для БД, если её нет
+    # Создаем директорию для БД, если её нет (только если путь абсолютный)
     db_path = settings.database_url.replace('sqlite+aiosqlite:///', '')
     if db_path.startswith('/'):
         # Абсолютный путь
         db_dir = os.path.dirname(db_path)
         if db_dir and not os.path.exists(db_dir):
-            os.makedirs(db_dir, exist_ok=True)
+            try:
+                os.makedirs(db_dir, exist_ok=True)
+            except OSError as e:
+                # Если не можем создать (например, диск еще не смонтирован), пропускаем
+                # Директория будет создана автоматически при монтировании диска
+                print(f"Warning: Could not create directory {db_dir}: {e}")
     
     engine = create_async_engine(settings.database_url)
     async with engine.begin() as conn:

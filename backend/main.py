@@ -14,11 +14,14 @@ class CustomStaticFiles(StaticFiles):
         return await super().get_response(decoded_path, scope)
 
 from contextlib import asynccontextmanager
+from init_db import init_users
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await create_tables()
+    # Initialize database with default users
+    await init_users()
     yield
     # Shutdown (if needed)
 
