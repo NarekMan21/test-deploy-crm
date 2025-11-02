@@ -13,6 +13,7 @@ eggs/
 lib/
 lib64/
 !frontend/src/lib/utils.ts
+!frontend/src/lib/api.ts
 parts/
 sdist/
 var/
