@@ -48,12 +48,24 @@ app = FastAPI(title="CRM Furniture", version="1.0.0", lifespan=lifespan)
 # Получаем разрешенные origins из переменной окружения или используем значения по умолчанию
 cors_origins = os.getenv(
     "CORS_ORIGINS",
-    "http://localhost:3000,http://frontend:3000"
+    "http://localhost:3000,http://frontend:3000,https://crmpy-frontend.onrender.com"
 ).split(",")
+
+# Добавляем все возможные origins для Render
+cors_origins.extend([
+    "https://crmpy-frontend.onrender.com",
+    "http://localhost:3000",
+    "http://frontend:3000"
+])
+
+# Удаляем дубликаты
+cors_origins = list(set([origin.strip() for origin in cors_origins if origin.strip()]))
+
+print(f"[main] CORS origins configured: {cors_origins}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in cors_origins],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

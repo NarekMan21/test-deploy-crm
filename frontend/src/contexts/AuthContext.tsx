@@ -64,15 +64,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (username: string, password: string) => {
     try {
+      console.log('[Auth] Attempting login for:', username);
       const response = await authAPI.login(username, password);
+      console.log('[Auth] Login response:', response);
       const { access_token, user: userData } = response.data;
 
       localStorage.setItem('token', access_token);
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
-    } catch (error) {
-      console.error('Login error:', error);
-      throw new Error('Неверные учетные данные');
+      console.log('[Auth] Login successful');
+    } catch (error: any) {
+      console.error('[Auth] Login error:', error);
+      console.error('[Auth] Error response:', error.response?.data);
+      console.error('[Auth] Error status:', error.response?.status);
+      throw new Error(error.response?.data?.detail || 'Неверные учетные данные');
     }
   };
 

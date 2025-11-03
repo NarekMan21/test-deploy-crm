@@ -82,6 +82,10 @@ async def login(username: str = Form(...), password: str = Form(...), db: AsyncS
     username_clean = username.strip() if username else ""
     password_clean = password.strip() if password else ""
     
+    # Используем print для гарантии, что логи будут видны
+    print(f"[auth] ===== LOGIN ATTEMPT =====")
+    print(f"[auth] Username: '{username_clean}'")
+    print(f"[auth] Password length: {len(password_clean)}")
     logger.info(f"[auth] Login attempt for username: {username_clean}")
     
     if not username_clean:
@@ -99,6 +103,7 @@ async def login(username: str = Form(...), password: str = Form(...), db: AsyncS
     user = result.scalar_one_or_none()
     
     if not user:
+        print(f"[auth] ERROR: User not found: '{username_clean}'")
         logger.warning(f"[auth] User not found: {username_clean}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -106,9 +111,11 @@ async def login(username: str = Form(...), password: str = Form(...), db: AsyncS
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    print(f"[auth] User found: {user.username}, stored password: '{user.hashed_password}', is_active: {user.is_active}")
     logger.info(f"[auth] User found: {user.username}, is_active: {user.is_active}, role: {user.role}")
     
     if not user.is_active:
+        print(f"[auth] ERROR: User account disabled: {username_clean}")
         logger.warning(f"[auth] User account disabled: {username_clean}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -117,15 +124,19 @@ async def login(username: str = Form(...), password: str = Form(...), db: AsyncS
     
     # Простая проверка пароля без шифрования - просто сравнение строк
     password_valid = (password_clean == user.hashed_password)
+    print(f"[auth] Password check: input='{password_clean}' vs stored='{user.hashed_password}' => {password_valid}")
     logger.info(f"[auth] Password verification result: {password_valid}")
     
     if not password_valid:
+        print(f"[auth] ERROR: Invalid password for user: {username_clean}")
         logger.warning(f"[auth] Invalid password for user: {username_clean}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    print(f"[auth] ===== LOGIN SUCCESS =====")
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
