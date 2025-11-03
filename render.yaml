@@ -37,6 +37,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Для Next.js NEXT_PUBLIC_* переменные должны быть доступны во время сборки
+      # fromService с property: host возвращает только имя хоста, код автоматически добавляет https:// и .onrender.com
       - key: NEXT_PUBLIC_API_URL
         fromService:
           type: web

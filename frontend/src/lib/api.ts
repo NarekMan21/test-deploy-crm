@@ -1,8 +1,20 @@
 import axios from 'axios';
 
 // Use environment variable or fallback to default
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-const API_SERVER_URL = process.env.NEXT_PUBLIC_API_SERVER_URL || 'http://localhost:8000';
+// Для production: используем полный URL, для dev: localhost
+let API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+let API_SERVER_URL = process.env.NEXT_PUBLIC_API_SERVER_URL || 'http://localhost:8000';
+
+// Если URL не содержит протокол (только имя хоста), добавляем https:// и .onrender.com
+if (API_BASE_URL && !API_BASE_URL.startsWith('http')) {
+  // Если это просто имя хоста (например, "crmpy-backend"), добавляем полный URL
+  const baseHost = API_BASE_URL.includes('/') ? API_BASE_URL.split('/')[0] : API_BASE_URL;
+  API_BASE_URL = `https://${baseHost}.onrender.com/api`;
+}
+if (API_SERVER_URL && !API_SERVER_URL.startsWith('http')) {
+  // Если это просто имя хоста, добавляем полный URL
+  API_SERVER_URL = `https://${API_SERVER_URL}.onrender.com`;
+}
 
 // Логируем URL для отладки
 console.log('[API] API_BASE_URL:', API_BASE_URL);
