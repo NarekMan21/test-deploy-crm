@@ -40,9 +40,15 @@ export default function DashboardPage() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Filter and sort states
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'created_at' | 'deadline' | 'order_number' | 'customer_name' | 'price'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Form states
   const [formData, setFormData] = useState({
+    order_number: '',
     customer_name: '',
     customer_phone: '',
     customer_address: '',
@@ -53,10 +59,6 @@ export default function DashboardPage() {
     material_photo: null as File | null,
     furniture_photo: null as File | null,
   });
-
-  useEffect(() => {
-    loadOrders();
-  }, []);
 
   const loadOrders = async () => {
     try {
@@ -75,6 +77,59 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
+
+  // Filter and sort orders
+  const getFilteredAndSortedOrders = () => {
+    let filtered = [...orders];
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortBy) {
+        case 'created_at':
+          aValue = new Date(a.created_at).getTime();
+          bValue = new Date(b.created_at).getTime();
+          break;
+        case 'deadline':
+          aValue = a.deadline ? new Date(a.deadline).getTime() : 0;
+          bValue = b.deadline ? new Date(b.deadline).getTime() : 0;
+          break;
+        case 'order_number':
+          aValue = a.order_number || 0;
+          bValue = b.order_number || 0;
+          break;
+        case 'customer_name':
+          aValue = a.customer_name.toLowerCase();
+          bValue = b.customer_name.toLowerCase();
+          break;
+        case 'price':
+          aValue = a.price || 0;
+          bValue = b.price || 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  };
+
+  const filteredAndSortedOrders = getFilteredAndSortedOrders();
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
 
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,11 +187,37 @@ export default function DashboardPage() {
     }
 
     const data = new FormData();
+    
+    // Order number - only for admins, optional
+    if (formData.order_number && formData.order_number.trim()) {
+      const orderNum = parseInt(formData.order_number.trim());
+      if (!isNaN(orderNum) && orderNum >= 1 && orderNum <= 9999) {
+        data.append('order_number', orderNum.toString());
+      }
+    }
+    
     data.append('customer_name', formData.customer_name.trim());
     data.append('customer_phone', formData.customer_phone.trim());
     data.append('customer_address', formData.customer_address.trim());
     if (formData.phone_agreement_notes) {
       data.append('phone_agreement_notes', formData.phone_agreement_notes.trim());
+    }
+    if (formData.customer_requirements) {
+      data.append('customer_requirements', formData.customer_requirements.trim());
+    }
+    if (formData.price && formData.price.trim()) {
+      const priceNum = parseInt(formData.price.trim());
+      if (!isNaN(priceNum) && priceNum >= 0) {
+        data.append('price', priceNum.toString());
+      }
+    }
+    if (formData.deadline && formData.deadline.trim()) {
+      // Convert date to ISO string if it's just a date
+      let deadlineValue = formData.deadline.trim();
+      if (deadlineValue && !deadlineValue.includes('T')) {
+        deadlineValue = `${deadlineValue}T00:00:00Z`;
+      }
+      data.append('deadline', deadlineValue);
     }
 
     try {
@@ -172,7 +253,14 @@ export default function DashboardPage() {
 
     const data = new FormData();
     data.append('customer_requirements', formData.customer_requirements.trim());
-    data.append('deadline', formData.deadline);
+    
+    // Convert date to ISO string if it's just a date (YYYY-MM-DD)
+    let deadlineValue = formData.deadline;
+    if (deadlineValue && !deadlineValue.includes('T')) {
+      // If it's just a date, add time component
+      deadlineValue = `${deadlineValue}T00:00:00Z`;
+    }
+    data.append('deadline', deadlineValue);
     data.append('price', price.toString());
     if (formData.material_photo) {
       data.append('material_photo', formData.material_photo);
@@ -229,6 +317,7 @@ export default function DashboardPage() {
 
   const resetForm = () => {
     setFormData({
+      order_number: '',
       customer_name: '',
       customer_phone: '',
       customer_address: '',
@@ -243,13 +332,26 @@ export default function DashboardPage() {
 
   const openEditDialog = (order: Order) => {
     setSelectedOrder(order);
+    // Format deadline for date input (YYYY-MM-DD)
+    let deadlineFormatted = '';
+    if (order.deadline) {
+      try {
+        const date = new Date(order.deadline);
+        if (!isNaN(date.getTime())) {
+          deadlineFormatted = date.toISOString().split('T')[0];
+        }
+      } catch {
+        deadlineFormatted = '';
+      }
+    }
     setFormData({
+      order_number: order.order_number?.toString() || '',
       customer_name: order.customer_name,
       customer_phone: order.customer_phone || '',
       customer_address: order.customer_address || '',
       phone_agreement_notes: order.phone_agreement_notes || '',
       customer_requirements: order.customer_requirements || '',
-      deadline: order.deadline || '',
+      deadline: deadlineFormatted,
       price: order.price?.toString() || '',
       material_photo: null,
       furniture_photo: null,
@@ -259,13 +361,26 @@ export default function DashboardPage() {
 
   const openDetailsDialog = (order: Order) => {
     setSelectedOrder(order);
+    // Format deadline for date input (YYYY-MM-DD)
+    let deadlineFormatted = '';
+    if (order.deadline) {
+      try {
+        const date = new Date(order.deadline);
+        if (!isNaN(date.getTime())) {
+          deadlineFormatted = date.toISOString().split('T')[0];
+        }
+      } catch {
+        deadlineFormatted = '';
+      }
+    }
     setFormData({
+      order_number: order.order_number?.toString() || '',
       customer_name: order.customer_name,
       customer_phone: order.customer_phone || '',
       customer_address: order.customer_address || '',
       phone_agreement_notes: order.phone_agreement_notes || '',
       customer_requirements: order.customer_requirements || '',
-      deadline: order.deadline || '',
+      deadline: deadlineFormatted,
       price: order.price?.toString() || '',
       material_photo: null,
       furniture_photo: null,
@@ -388,8 +503,68 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Filter and Sort Controls */}
+              <div className="mb-4 space-y-2 p-4 bg-gray-50 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Status Filter */}
+                  <div>
+                    <Label htmlFor="status-filter" className="text-sm font-medium mb-1 block">Фильтр по статусу</Label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger id="status-filter">
+                        <SelectValue placeholder="Все статусы" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все статусы</SelectItem>
+                        <SelectItem value="draft">Черновик</SelectItem>
+                        <SelectItem value="pending_confirmation">Ожидает подтверждения</SelectItem>
+                        <SelectItem value="confirmed">Подтвержден</SelectItem>
+                        <SelectItem value="in_progress">В работе</SelectItem>
+                        <SelectItem value="ready">Готов к доставке</SelectItem>
+                        <SelectItem value="delivered">Доставлен</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Sort By */}
+                  <div>
+                    <Label htmlFor="sort-by" className="text-sm font-medium mb-1 block">Сортировать по</Label>
+                    <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                      <SelectTrigger id="sort-by">
+                        <SelectValue placeholder="Выберите поле" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="created_at">Дата создания</SelectItem>
+                        <SelectItem value="deadline">Срок выполнения</SelectItem>
+                        <SelectItem value="order_number">Номер заказа</SelectItem>
+                        <SelectItem value="customer_name">Имя заказчика</SelectItem>
+                        {user?.role === 'admin' && (
+                          <SelectItem value="price">Цена</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Sort Order */}
+                  <div>
+                    <Label htmlFor="sort-order" className="text-sm font-medium mb-1 block">Порядок сортировки</Label>
+                    <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+                      <SelectTrigger id="sort-order">
+                        <SelectValue placeholder="Порядок" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="desc">По убыванию</SelectItem>
+                        <SelectItem value="asc">По возрастанию</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-600">
+                  Найдено заказов: {filteredAndSortedOrders.length} из {orders.length}
+                </div>
+              </div>
+
               <div className="space-y-4">
-                {orders.map((order) => (
+                {filteredAndSortedOrders.map((order) => (
                   <Card key={order.id} className="p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -577,6 +752,18 @@ export default function DashboardPage() {
               </DialogHeader>
               <form onSubmit={handleUpdateOrder} className="space-y-4">
                 <div>
+                  <Label htmlFor="edit_order_number">Номер заказа (1-9999)</Label>
+                  <Input
+                    id="edit_order_number"
+                    type="number"
+                    min="1"
+                    max="9999"
+                    value={formData.order_number}
+                    onChange={(e) => setFormData({...formData, order_number: e.target.value})}
+                    placeholder="Автоматически при подтверждении"
+                  />
+                </div>
+                <div>
                   <Label htmlFor="edit_customer_name">Имя заказчика</Label>
                   <Input
                     id="edit_customer_name"
@@ -611,6 +798,34 @@ export default function DashboardPage() {
                     onChange={(e) => setFormData({...formData, phone_agreement_notes: e.target.value})}
                   />
                 </div>
+                <div>
+                  <Label htmlFor="edit_customer_requirements">Требования клиента</Label>
+                  <Textarea
+                    id="edit_customer_requirements"
+                    value={formData.customer_requirements}
+                    onChange={(e) => setFormData({...formData, customer_requirements: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_deadline">Срок выполнения</Label>
+                  <Input
+                    id="edit_deadline"
+                    type="date"
+                    value={formData.deadline}
+                    onChange={(e) => setFormData({...formData, deadline: e.target.value})}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_price">Цена (руб.)</Label>
+                  <Input
+                    id="edit_price"
+                    type="number"
+                    min="0"
+                    value={formData.price}
+                    onChange={(e) => setFormData({...formData, price: e.target.value})}
+                  />
+                </div>
                 <div className="flex gap-2">
                   <Button type="submit">Сохранить</Button>
                   <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
@@ -639,39 +854,45 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <Label htmlFor="deadline">Срок выполнения</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="deadline"
-                      type="datetime-local"
-                      value={formData.deadline ? (() => {
-                        try {
-                          const date = new Date(formData.deadline);
-                          if (isNaN(date.getTime())) return '';
-                          // Format as datetime-local (YYYY-MM-DDTHH:mm)
-                          const year = date.getFullYear();
-                          const month = String(date.getMonth() + 1).padStart(2, '0');
-                          const day = String(date.getDate()).padStart(2, '0');
-                          const hours = String(date.getHours()).padStart(2, '0');
-                          const minutes = String(date.getMinutes()).padStart(2, '0');
-                          return `${year}-${month}-${day}T${hours}:${minutes}`;
-                        } catch {
-                          return formData.deadline.split('T')[0] || '';
-                        }
-                      })() : ''}
-                      onChange={(e) => {
+                  <Input
+                    id="deadline"
+                    type="date"
+                    value={formData.deadline ? (() => {
+                      try {
+                        const date = new Date(formData.deadline);
+                        if (isNaN(date.getTime())) return '';
+                        // Format as date (YYYY-MM-DD)
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                      } catch {
+                        return formData.deadline.split('T')[0] || '';
+                      }
+                    })() : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value) {
+                        // Convert date to ISO string (with time set to 00:00:00)
+                        const date = new Date(value + 'T00:00:00Z');
+                        setFormData({...formData, deadline: date.toISOString()});
+                        // Auto-close calendar by blurring the input
+                        e.target.blur();
+                      } else {
+                        setFormData({...formData, deadline: ''});
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Ensure calendar closes after selection
+                      if (e.target.value) {
                         const value = e.target.value;
-                        if (value) {
-                          // Convert datetime-local to ISO string
-                          const date = new Date(value);
-                          setFormData({...formData, deadline: date.toISOString()});
-                        } else {
-                          setFormData({...formData, deadline: ''});
-                        }
-                      }}
-                      required
-                      min={new Date().toISOString().slice(0, 16)}
-                    />
-                  </div>
+                        const date = new Date(value + 'T00:00:00Z');
+                        setFormData({...formData, deadline: date.toISOString()});
+                      }
+                    }}
+                    required
+                    min={new Date().toISOString().split('T')[0]}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="price">Цена (руб.)</Label>

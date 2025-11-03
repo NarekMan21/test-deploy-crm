@@ -183,10 +183,14 @@ async def get_order(
 @router.put("/{order_id}")
 async def update_order(
     order_id: int,
+    order_number: Optional[int] = Form(None),
     customer_name: Optional[str] = Form(None),
     customer_phone: Optional[str] = Form(None),
     customer_address: Optional[str] = Form(None),
     phone_agreement_notes: Optional[str] = Form(None),
+    customer_requirements: Optional[str] = Form(None),
+    deadline: Optional[str] = Form(None),
+    price: Optional[int] = Form(None),
     current_user: User = Depends(get_current_admin_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -195,33 +199,74 @@ async def update_order(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    # Admins can edit orders at any stage
+    # Admins can edit orders at any stage and all fields including order_number
 
     old_values = {
+        "order_number": order.order_number,
         "customer_name": order.customer_name,
         "customer_phone": order.customer_phone,
         "customer_address": order.customer_address,
         "phone_agreement_notes": order.phone_agreement_notes,
+        "customer_requirements": order.customer_requirements,
+        "deadline": str(order.deadline) if order.deadline else None,
+        "price": order.price,
     }
 
+    # Validate order_number if provided
+    if order_number is not None:
+        if order_number < 1 or order_number > 9999:
+            raise HTTPException(status_code=400, detail="Order number must be between 1 and 9999")
+        # Check if order_number is already taken by another order
+        existing = await db.execute(select(Order).where(Order.order_number == order_number).where(Order.id != order_id))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail=f"Order number {order_number} is already taken")
+        order.order_number = order_number
+
     if customer_name is not None:
-        order.customer_name = customer_name
+        order.customer_name = customer_name.strip() if customer_name else ""
     if customer_phone is not None:
-        order.customer_phone = customer_phone
+        order.customer_phone = customer_phone.strip() if customer_phone else ""
     if customer_address is not None:
-        order.customer_address = customer_address
+        order.customer_address = customer_address.strip() if customer_address else ""
     if phone_agreement_notes is not None:
-        order.phone_agreement_notes = phone_agreement_notes
+        order.phone_agreement_notes = phone_agreement_notes.strip() if phone_agreement_notes else None
+    if customer_requirements is not None:
+        order.customer_requirements = customer_requirements.strip() if customer_requirements else None
+    if price is not None:
+        if price < 0:
+            raise HTTPException(status_code=400, detail="Price must be non-negative")
+        order.price = price
+    if deadline is not None:
+        if deadline.strip():
+            try:
+                # Normalize deadline format
+                deadline_str = deadline.replace('Z', '+00:00') if 'Z' in deadline else deadline
+                if '+' not in deadline_str and '-' not in deadline_str[-6:]:
+                    deadline_str += '+00:00'
+                deadline_dt = datetime.fromisoformat(deadline_str)
+                if deadline_dt.tzinfo is None:
+                    deadline_dt = deadline_dt.replace(tzinfo=timezone.utc)
+                order.deadline = deadline_dt
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=f"Invalid deadline format: {str(e)}")
+        else:
+            order.deadline = None
+
     order.updated_by = current_user.id
     order.updated_at = datetime.now(timezone.utc)
 
     await db.commit()
+    await db.refresh(order)
 
     new_values = {
-        "customer_name": customer_name if customer_name is not None else order.customer_name,
-        "customer_phone": customer_phone if customer_phone is not None else order.customer_phone,
-        "customer_address": customer_address if customer_address is not None else order.customer_address,
-        "phone_agreement_notes": phone_agreement_notes if phone_agreement_notes is not None else order.phone_agreement_notes,
+        "order_number": order.order_number,
+        "customer_name": order.customer_name,
+        "customer_phone": order.customer_phone,
+        "customer_address": order.customer_address,
+        "phone_agreement_notes": order.phone_agreement_notes,
+        "customer_requirements": order.customer_requirements,
+        "deadline": str(order.deadline) if order.deadline else None,
+        "price": order.price,
     }
 
     field_changes = {}
