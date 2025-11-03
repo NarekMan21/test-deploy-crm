@@ -82,10 +82,16 @@ export interface OrderHistory {
 
 // Auth API
 export const authAPI = {
-  login: (username: string, password: string) =>
-    api.post('/auth/login', new URLSearchParams({ username, password }), {
+  login: (username: string, password: string) => {
+    console.log('[API] login called with:', { username, password: '***' });
+    const formData = new URLSearchParams();
+    formData.append('username', username);
+    formData.append('password', password);
+    console.log('[API] FormData:', formData.toString());
+    return api.post('/auth/login', formData, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    }),
+    });
+  },
   getMe: () => api.get('/auth/me'),
 };
 

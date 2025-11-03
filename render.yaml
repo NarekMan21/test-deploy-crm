@@ -48,5 +48,8 @@ services:
           type: web
           name: crmpy-backend
           property: host
+      # Убеждаемся, что переменные доступны во время сборки
+      - key: BUILD_ENV
+        value: production
       - key: NEXT_TELEMETRY_DISABLED
         value: 1

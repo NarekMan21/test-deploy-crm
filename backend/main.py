@@ -63,6 +63,17 @@ cors_origins = list(set([origin.strip() for origin in cors_origins if origin.str
 
 print(f"[main] CORS origins configured: {cors_origins}")
 
+# Добавляем логирование всех запросов для отладки
+@app.middleware("http")
+async def log_requests(request, call_next):
+    import time
+    start_time = time.time()
+    print(f"[main] Incoming request: {request.method} {request.url.path}")
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    print(f"[main] Request processed: {request.method} {request.url.path} - {response.status_code} - {process_time:.2f}s")
+    return response
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
