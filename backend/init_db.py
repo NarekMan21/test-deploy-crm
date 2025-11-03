@@ -8,7 +8,6 @@ from models import User, UserRole
 
 async def init_users():
     # Используем переменную окружения для URL базы данных
-    import os
     from database import settings
     
     print(f"[init_db] Starting database initialization...")
@@ -51,6 +50,7 @@ async def init_users():
             ]
 
             created_count = 0
+            updated_count = 0
             for user_data in users_data:
                 # Check if user already exists
                 result = await session.execute(
@@ -59,6 +59,7 @@ async def init_users():
                 existing_user = result.scalar_one_or_none()
 
                 if not existing_user:
+                    # Create new user
                     hashed = bcrypt.hash(user_data["password"][:72])  # bcrypt limit
                     user = User(
                         username=user_data["username"],
@@ -69,10 +70,18 @@ async def init_users():
                     created_count += 1
                     print(f"[init_db] Created user: {user_data['username']} (role: {user_data['role'].value})")
                 else:
-                    print(f"[init_db] User {user_data['username']} already exists, skipping")
+                    # Update existing user password to ensure it's correctly hashed
+                    # This fixes potential issues with old password hashes
+                    hashed = bcrypt.hash(user_data["password"][:72])
+                    existing_user.hashed_password = hashed
+                    existing_user.is_active = True  # Ensure user is active
+                    if existing_user.role != user_data["role"]:
+                        existing_user.role = user_data["role"]
+                    updated_count += 1
+                    print(f"[init_db] Updated user: {user_data['username']} (role: {user_data['role'].value}, password reset)")
 
             await session.commit()
-            print(f"[init_db] Database initialized: {created_count} new users created, {len(users_data)} total users")
+            print(f"[init_db] Database initialized: {created_count} new users created, {updated_count} users updated, {len(users_data)} total users")
     except Exception as e:
         print(f"[init_db] ERROR during initialization: {type(e).__name__}: {e}")
         import traceback

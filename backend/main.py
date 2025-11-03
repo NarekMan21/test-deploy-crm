@@ -6,6 +6,13 @@ from routers import auth, orders
 import uvicorn
 import os
 import urllib.parse
+import logging
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 class CustomStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
