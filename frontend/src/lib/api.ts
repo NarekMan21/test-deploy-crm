@@ -4,6 +4,10 @@ import axios from 'axios';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const API_SERVER_URL = process.env.NEXT_PUBLIC_API_SERVER_URL || 'http://localhost:8000';
 
+// Логируем URL для отладки
+console.log('[API] API_BASE_URL:', API_BASE_URL);
+console.log('[API] API_SERVER_URL:', API_SERVER_URL);
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
 });
@@ -18,16 +22,24 @@ export const getUploadUrl = (filename: string): string => {
 // Add token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
+  console.log('[API] Request:', config.method?.toUpperCase(), config.url, 'Full URL:', config.baseURL + config.url);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
+}, (error) => {
+  console.error('[API] Request error:', error);
+  return Promise.reject(error);
 });
 
 // Handle token expiration
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('[API] Response:', response.status, response.config.url);
+    return response;
+  },
   (error) => {
+    console.error('[API] Response error:', error.response?.status, error.response?.data, error.config?.url);
     if (error.response?.status === 401 || error.response?.status === 403) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
