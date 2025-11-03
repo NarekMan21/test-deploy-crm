@@ -77,35 +77,51 @@ async def get_current_work_user(current_user: User = Depends(get_current_user)) 
 
 @router.post("/login")
 async def login(username: str = Form(...), password: str = Form(...), db: AsyncSession = Depends(get_db)):
+    import logging
+    logger = logging.getLogger(__name__)
+    
     # Validate input
-    if not username or not username.strip():
+    username_clean = username.strip() if username else ""
+    password_clean = password.strip() if password else ""
+    
+    logger.info(f"[auth] Login attempt for username: {username_clean}")
+    
+    if not username_clean:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username is required"
         )
-    if not password or not password.strip():
+    if not password_clean:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Password is required"
         )
     
-    result = await db.execute(select(User).where(User.username == username.strip()))
+    result = await db.execute(select(User).where(User.username == username_clean))
     user = result.scalar_one_or_none()
     
     if not user:
+        logger.warning(f"[auth] User not found: {username_clean}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    logger.info(f"[auth] User found: {user.username}, is_active: {user.is_active}, role: {user.role}")
+    
     if not user.is_active:
+        logger.warning(f"[auth] User account disabled: {username_clean}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is disabled"
         )
     
-    if not bcrypt.verify(password, user.hashed_password):
+    password_valid = bcrypt.verify(password_clean, user.hashed_password)
+    logger.info(f"[auth] Password verification result: {password_valid}")
+    
+    if not password_valid:
+        logger.warning(f"[auth] Invalid password for user: {username_clean}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",

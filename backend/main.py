@@ -19,11 +19,21 @@ from init_db import init_users
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    await create_tables()
-    # Initialize database with default users
-    await init_users()
+    print("[main] Application startup...")
+    try:
+        await create_tables()
+        print("[main] Tables created/verified")
+        # Initialize database with default users
+        await init_users()
+        print("[main] Database initialization completed")
+    except Exception as e:
+        print(f"[main] ERROR during startup: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        # Не падаем, чтобы приложение могло запуститься даже если БД не готова
     yield
     # Shutdown (if needed)
+    print("[main] Application shutdown")
 
 app = FastAPI(title="CRM Furniture", version="1.0.0", lifespan=lifespan)
 
