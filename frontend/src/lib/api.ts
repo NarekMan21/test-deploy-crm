@@ -113,6 +113,7 @@ export const ordersAPI = {
   getOrder: (id: number) => api.get(`/orders/${id}`),
   createOrder: (data: FormData) => api.post('/orders/', data),
   updateOrder: (id: number, data: FormData) => api.put(`/orders/${id}`, data),
+  deleteOrder: (id: number) => api.delete(`/orders/${id}`),
   submitOrder: (id: number) => api.post(`/orders/${id}/submit`),
   confirmOrder: (id: number) => api.post(`/orders/${id}/confirm`),
   addOrderDetails: (id: number, data: FormData) => api.put(`/orders/${id}/details`, data),

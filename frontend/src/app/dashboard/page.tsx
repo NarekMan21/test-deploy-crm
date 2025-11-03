@@ -39,6 +39,7 @@ export default function DashboardPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showFiltersDialog, setShowFiltersDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   
   // Filter and sort states
@@ -296,6 +297,12 @@ export default function DashboardPage() {
         case 'deliver':
           await ordersAPI.markDelivered(orderId);
           break;
+        case 'delete':
+          if (confirm('Вы уверены, что хотите удалить этот заказ?')) {
+            await ordersAPI.deleteOrder(orderId);
+            loadOrders();
+          }
+          return;
       }
       loadOrders();
     } catch (error: any) {
@@ -503,64 +510,83 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {/* Filter and Sort Controls */}
-              <div className="mb-4 space-y-2 p-4 bg-gray-50 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Status Filter */}
-                  <div>
-                    <Label htmlFor="status-filter" className="text-sm font-medium mb-1 block">Фильтр по статусу</Label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger id="status-filter">
-                        <SelectValue placeholder="Все статусы" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Все статусы</SelectItem>
-                        <SelectItem value="draft">Черновик</SelectItem>
-                        <SelectItem value="pending_confirmation">Ожидает подтверждения</SelectItem>
-                        <SelectItem value="confirmed">Подтвержден</SelectItem>
-                        <SelectItem value="in_progress">В работе</SelectItem>
-                        <SelectItem value="ready">Готов к доставке</SelectItem>
-                        <SelectItem value="delivered">Доставлен</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Sort By */}
-                  <div>
-                    <Label htmlFor="sort-by" className="text-sm font-medium mb-1 block">Сортировать по</Label>
-                    <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-                      <SelectTrigger id="sort-by">
-                        <SelectValue placeholder="Выберите поле" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="created_at">Дата создания</SelectItem>
-                        <SelectItem value="deadline">Срок выполнения</SelectItem>
-                        <SelectItem value="order_number">Номер заказа</SelectItem>
-                        <SelectItem value="customer_name">Имя заказчика</SelectItem>
-                        {user?.role === 'admin' && (
-                          <SelectItem value="price">Цена</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Sort Order */}
-                  <div>
-                    <Label htmlFor="sort-order" className="text-sm font-medium mb-1 block">Порядок сортировки</Label>
-                    <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
-                      <SelectTrigger id="sort-order">
-                        <SelectValue placeholder="Порядок" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="desc">По убыванию</SelectItem>
-                        <SelectItem value="asc">По возрастанию</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+              {/* Filter and Sort Button */}
+              <div className="mb-4 flex justify-between items-center">
                 <div className="text-sm text-gray-600">
                   Найдено заказов: {filteredAndSortedOrders.length} из {orders.length}
                 </div>
+                <Dialog open={showFiltersDialog} onOpenChange={setShowFiltersDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">Фильтры и сортировка</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Фильтры и сортировка</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      {/* Status Filter */}
+                      <div>
+                        <Label htmlFor="status-filter" className="text-sm font-medium mb-1 block">Фильтр по статусу</Label>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger id="status-filter">
+                            <SelectValue placeholder="Все статусы" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Все статусы</SelectItem>
+                            <SelectItem value="draft">Черновик</SelectItem>
+                            <SelectItem value="pending_confirmation">Ожидает подтверждения</SelectItem>
+                            <SelectItem value="confirmed">Подтвержден</SelectItem>
+                            <SelectItem value="in_progress">В работе</SelectItem>
+                            <SelectItem value="ready">Готов к доставке</SelectItem>
+                            <SelectItem value="delivered">Доставлен</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Sort By */}
+                      <div>
+                        <Label htmlFor="sort-by" className="text-sm font-medium mb-1 block">Сортировать по</Label>
+                        <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                          <SelectTrigger id="sort-by">
+                            <SelectValue placeholder="Выберите поле" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="created_at">Дата создания</SelectItem>
+                            <SelectItem value="deadline">Срок выполнения</SelectItem>
+                            <SelectItem value="order_number">Номер заказа</SelectItem>
+                            <SelectItem value="customer_name">Имя заказчика</SelectItem>
+                            {user?.role === 'admin' && (
+                              <SelectItem value="price">Цена</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Sort Order */}
+                      <div>
+                        <Label htmlFor="sort-order" className="text-sm font-medium mb-1 block">Порядок сортировки</Label>
+                        <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+                          <SelectTrigger id="sort-order">
+                            <SelectValue placeholder="Порядок" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="desc">По убыванию</SelectItem>
+                            <SelectItem value="asc">По возрастанию</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={() => setShowFiltersDialog(false)} className="w-full">Применить</Button>
+                        <Button variant="outline" onClick={() => {
+                          setStatusFilter('all');
+                          setSortBy('created_at');
+                          setSortOrder('desc');
+                          setShowFiltersDialog(false);
+                        }}>Сбросить</Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
 
               <div className="space-y-4">
@@ -620,6 +646,16 @@ export default function DashboardPage() {
                       {user?.role === 'logist' && order.status === 'confirmed' && (
                         <Button size="sm" onClick={() => openDetailsDialog(order)}>
                           Добавить детали
+                        </Button>
+                      )}
+                      {user?.role === 'admin' && order.status !== 'delivered' && (
+                        <Button size="sm" onClick={() => openDetailsDialog(order)}>
+                          Добавить детали
+                        </Button>
+                      )}
+                      {user?.role === 'admin' && (
+                        <Button size="sm" variant="destructive" onClick={() => handleAction(order.id, 'delete')}>
+                          Удалить
                         </Button>
                       )}
                       {user?.role === 'work' && order.status === 'in_progress' && (

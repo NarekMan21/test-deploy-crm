@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update, func, delete
 from typing import List, Optional
 from datetime import datetime, timezone
 import json
@@ -279,6 +279,26 @@ async def update_order(
 
     return {"message": "Order updated successfully"}
 
+@router.delete("/{order_id}")
+async def delete_order(
+    order_id: int,
+    current_user: User = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Order).where(Order.id == order_id))
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Log deletion before deleting
+    await log_order_change(db, order_id, current_user.id, "deleted")
+
+    # Delete the order using delete statement
+    await db.execute(delete(Order).where(Order.id == order_id))
+    await db.commit()
+
+    return {"message": "Order deleted successfully"}
+
 @router.post("/{order_id}/submit")
 async def submit_order_for_confirmation(
     order_id: int,
@@ -327,7 +347,7 @@ async def confirm_order(
 
     return {"message": f"Order confirmed with number {next_number}"}
 
-# Logistics endpoints
+# Logistics endpoints - Admins can also add details
 @router.put("/{order_id}/details")
 async def add_order_details(
     order_id: int,
@@ -336,15 +356,20 @@ async def add_order_details(
     price: int = Form(...),
     material_photo: UploadFile = File(None),
     furniture_photo: UploadFile = File(None),
-    current_user: User = Depends(get_current_logist_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    # Check permissions - only logist and admin can add details
+    if current_user.role.value not in ["logist", "admin"]:
+        raise HTTPException(status_code=403, detail="Only logist and admin can add order details")
+    
     result = await db.execute(select(Order).where(Order.id == order_id))
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    if order.status != OrderStatus.confirmed:
+    # Admins can add details to orders at any stage, logist only to confirmed orders
+    if current_user.role.value == "logist" and order.status != OrderStatus.confirmed:
         raise HTTPException(status_code=400, detail="Can only add details to confirmed orders")
 
     # Validate price
@@ -423,7 +448,9 @@ async def add_order_details(
     order.customer_requirements = customer_requirements
     order.deadline = deadline_dt
     order.price = price
-    order.status = OrderStatus.in_progress
+    # Only change status if it's logist, admins can add details at any stage without changing status
+    if current_user.role.value == "logist":
+        order.status = OrderStatus.in_progress
     order.updated_by = current_user.id
     order.updated_at = datetime.now(timezone.utc)
 
