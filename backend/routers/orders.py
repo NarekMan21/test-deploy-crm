@@ -191,6 +191,7 @@ async def update_order(
     customer_requirements: Optional[str] = Form(None),
     deadline: Optional[str] = Form(None),
     price: Optional[int] = Form(None),
+    status: Optional[str] = Form(None),
     current_user: User = Depends(get_current_admin_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -199,7 +200,7 @@ async def update_order(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    # Admins can edit orders at any stage and all fields including order_number
+    # Admins can edit orders at any stage and all fields including order_number and status
 
     old_values = {
         "order_number": order.order_number,
@@ -210,6 +211,7 @@ async def update_order(
         "customer_requirements": order.customer_requirements,
         "deadline": str(order.deadline) if order.deadline else None,
         "price": order.price,
+        "status": order.status.value if order.status else None,
     }
 
     # Validate order_number if provided
@@ -251,6 +253,13 @@ async def update_order(
                 raise HTTPException(status_code=400, detail=f"Invalid deadline format: {str(e)}")
         else:
             order.deadline = None
+    
+    # Allow admins to change status
+    if status is not None:
+        try:
+            order.status = OrderStatus(status)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid status. Valid statuses: {[s.value for s in OrderStatus]}")
 
     order.updated_by = current_user.id
     order.updated_at = datetime.now(timezone.utc)
@@ -267,6 +276,7 @@ async def update_order(
         "customer_requirements": order.customer_requirements,
         "deadline": str(order.deadline) if order.deadline else None,
         "price": order.price,
+        "status": order.status.value if order.status else None,
     }
 
     field_changes = {}
@@ -448,8 +458,8 @@ async def add_order_details(
     order.customer_requirements = customer_requirements
     order.deadline = deadline_dt
     order.price = price
-    # Only change status if it's logist, admins can add details at any stage without changing status
-    if current_user.role.value == "logist":
+    # Change status to in_progress when details are added (both logist and admin)
+    if order.status != OrderStatus.delivered:
         order.status = OrderStatus.in_progress
     order.updated_by = current_user.id
     order.updated_at = datetime.now(timezone.utc)

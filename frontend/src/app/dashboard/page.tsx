@@ -57,6 +57,7 @@ export default function DashboardPage() {
     customer_requirements: '',
     deadline: '',
     price: '',
+    status: '',
     material_photo: null as File | null,
     furniture_photo: null as File | null,
   });
@@ -220,6 +221,9 @@ export default function DashboardPage() {
       }
       data.append('deadline', deadlineValue);
     }
+    if (formData.status && formData.status.trim()) {
+      data.append('status', formData.status.trim());
+    }
 
     try {
       await ordersAPI.updateOrder(selectedOrder.id, data);
@@ -332,6 +336,7 @@ export default function DashboardPage() {
       customer_requirements: '',
       deadline: '',
       price: '',
+      status: '',
       material_photo: null,
       furniture_photo: null,
     });
@@ -360,6 +365,7 @@ export default function DashboardPage() {
       customer_requirements: order.customer_requirements || '',
       deadline: deadlineFormatted,
       price: order.price?.toString() || '',
+      status: order.status || '',
       material_photo: null,
       furniture_photo: null,
     });
@@ -389,6 +395,7 @@ export default function DashboardPage() {
       customer_requirements: order.customer_requirements || '',
       deadline: deadlineFormatted,
       price: order.price?.toString() || '',
+      status: order.status || '',
       material_photo: null,
       furniture_photo: null,
     });
@@ -861,6 +868,22 @@ export default function DashboardPage() {
                     value={formData.price}
                     onChange={(e) => setFormData({...formData, price: e.target.value})}
                   />
+                </div>
+                <div>
+                  <Label htmlFor="edit_status">Статус заказа</Label>
+                  <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                    <SelectTrigger id="edit_status">
+                      <SelectValue placeholder="Выберите статус" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Черновик</SelectItem>
+                      <SelectItem value="pending_confirmation">Ожидает подтверждения</SelectItem>
+                      <SelectItem value="confirmed">Подтвержден</SelectItem>
+                      <SelectItem value="in_progress">В работе</SelectItem>
+                      <SelectItem value="ready">Готов к доставке</SelectItem>
+                      <SelectItem value="delivered">Доставлен</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex gap-2">
                   <Button type="submit">Сохранить</Button>
