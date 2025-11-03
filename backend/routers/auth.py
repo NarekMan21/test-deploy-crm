@@ -3,10 +3,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from jose import JWTError, jwt
-from passlib.hash import pbkdf2_sha256 as bcrypt
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-import json
 
 from database import get_db, settings
 from models import User, UserRole
@@ -117,7 +115,8 @@ async def login(username: str = Form(...), password: str = Form(...), db: AsyncS
             detail="User account is disabled"
         )
     
-    password_valid = bcrypt.verify(password_clean, user.hashed_password)
+    # Простая проверка пароля без шифрования - просто сравнение строк
+    password_valid = (password_clean == user.hashed_password)
     logger.info(f"[auth] Password verification result: {password_valid}")
     
     if not password_valid:

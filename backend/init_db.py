@@ -1,8 +1,8 @@
 import asyncio
+import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
-from passlib.hash import pbkdf2_sha256 as bcrypt
 from database import Base, settings
 from models import User, UserRole
 
@@ -59,21 +59,18 @@ async def init_users():
                 existing_user = result.scalar_one_or_none()
 
                 if not existing_user:
-                    # Create new user
-                    hashed = bcrypt.hash(user_data["password"][:72])  # bcrypt limit
+                    # Create new user - пароль хранится в открытом виде для простоты
                     user = User(
                         username=user_data["username"],
-                        hashed_password=hashed,
+                        hashed_password=user_data["password"],  # Просто храним пароль без шифрования
                         role=user_data["role"]
                     )
                     session.add(user)
                     created_count += 1
                     print(f"[init_db] Created user: {user_data['username']} (role: {user_data['role'].value})")
                 else:
-                    # Update existing user password to ensure it's correctly hashed
-                    # This fixes potential issues with old password hashes
-                    hashed = bcrypt.hash(user_data["password"][:72])
-                    existing_user.hashed_password = hashed
+                    # Update existing user password - обновляем пароль в открытом виде
+                    existing_user.hashed_password = user_data["password"]  # Просто храним пароль без шифрования
                     existing_user.is_active = True  # Ensure user is active
                     if existing_user.role != user_data["role"]:
                         existing_user.role = user_data["role"]
