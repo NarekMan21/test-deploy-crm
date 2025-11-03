@@ -22,7 +22,8 @@ export const getUploadUrl = (filename: string): string => {
 // Add token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  console.log('[API] Request:', config.method?.toUpperCase(), config.url, 'Full URL:', config.baseURL + config.url);
+  const fullUrl = config.baseURL && config.url ? `${config.baseURL}${config.url}` : config.url || 'unknown';
+  console.log('[API] Request:', config.method?.toUpperCase(), config.url, 'Full URL:', fullUrl);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
