@@ -72,10 +72,10 @@ export default function LoginPage() {
 
           <div className="mt-4 text-sm text-gray-600">
             <p><strong>Тестовые аккаунты:</strong></p>
-            <p>Админ: admin1 / nimda</p>
-            <p>Админ: admin2 / nimda</p>
-            <p>Логистика: logist / logist</p>
-            <p>Мастерская: work / work</p>
+            <p>Админ: admin1 / *</p>
+            <p>Админ: admin2 / *</p>
+            <p>Логистика: logist / *</p>
+            <p>Мастерская: work / *</p>
           </div>
         </CardContent>
       </Card>
