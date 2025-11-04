@@ -6,7 +6,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'CRM Перетяжка Мебели',
+  title: 'Перетяжкофф',
   description: 'Система управления заказами для перетяжки мебели',
 };
 
